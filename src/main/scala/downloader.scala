@@ -27,15 +27,14 @@ object downloader {
 
     collection.parallel.ForkJoinTasks.defaultForkJoinPool.setParallelism(30)
     val parsed = new MITx6002x(email, password)
-    if (args.length == 3 && args(2) !="?") {
-      val weekFilter = args(2)
-      parsed.weekList.filter(x => x.name == weekFilter).par.foreach(week => week.lectureSequence.par.foreach(lecSeq => (lecSeq.lectures.par.foreach(_.download))))
-    }
-    else if (args.length == 3) {
+    if (args.length == 3 && args(2) == "?") {
+      println("List of downloadable weeks as follows: ")
       parsed.weekList.foreach(x => println(x.name))
     }
     else {
-      println("List of downloadable weeks as follows: ")
+        val filterFunc = if (args.length == 3) {x: Week => x.name == args(2)} else {x: Week => true}
+      parsed.weekList.filter(filterFunc).foreach(println)
+      parsed.weekList.filter(filterFunc).par.foreach(week => week.lectureSequence.par.foreach(lecSeq => (lecSeq.lectures.par.foreach(_.download))))
     }
   }
   
