@@ -13,3 +13,5 @@ java -jar something-shorter.jar EMAIL PASSWORD ?
 
 Will list all weeks available, which you can then supply in place of the week argument.
 
+[Download Executable](https://github.com/terriblybored/MITx-6002x-Video-Downloader/raw/master/target/scala-2.9.1/default-e89b08_2.9.1-0.1-SNAPSHOT-one-jar.jar)
+====================
