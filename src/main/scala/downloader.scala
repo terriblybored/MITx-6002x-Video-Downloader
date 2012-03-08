@@ -21,7 +21,7 @@ object downloader {
       println("e.g. downloader example@example.com password \"Week 1\"")
       println("Omit last argument to download all")
       println("e.g. downloader example@example.com password")
-      println("Use ? in place of \"Week\" n to get list of downloadable week names")
+      println("Use ? in place of \"Week n\" to get list of downloadable week names")
       System.exit(-1)
     }
 
@@ -33,7 +33,6 @@ object downloader {
     }
     else {
         val filterFunc = if (args.length == 3) {x: Week => x.name == args(2)} else {x: Week => true}
-      parsed.weekList.filter(filterFunc).foreach(println)
       parsed.weekList.filter(filterFunc).par.foreach(week => week.lectureSequence.par.foreach(lecSeq => (lecSeq.lectures.par.foreach(_.download))))
     }
   }
@@ -85,7 +84,7 @@ class MITx6002x(val email: String, val password: String) {
         val links = weekLinks.select("li > a").map(_.attr("href"))
         val videoSequenceLinks = links.zip(linkType).filter(_._2 == "Lecture Sequence").map{_._1}
         
-        val lectureSeq = for ((link,name) <- videoSequenceLinks.zip(names)) yield {
+        val lectureSeq = for ((link,name) <- videoSequenceLinks.zip(names).par) yield {
           http(site / link >- {videoPage =>
             val streams = streamRegex.findAllIn(videoPage).flatMap(x => JSON.parseFull(x)).map(x=>x.asInstanceOf[Map[String,String]])
             val ids = streams.map(stream => stream("1.0")).toList //Speed is set over here
@@ -93,20 +92,20 @@ class MITx6002x(val email: String, val password: String) {
             new LectureSequence(name, videoNames.zip(ids).map({ x => new YoutubeLink(x._2,x._1,http)}))
             })
         }
-        new Week(weekName, lectureSeq)
+        new Week(weekName, lectureSeq.toList)
       }
     })
     
 }
 
 class YoutubeLink(val id: String, val filename: String, val http: HttpExecutor) {
-  val downloadLinkRegex = """(?<="url_encoded_fmt_stream_map": ")[\S]*(?=")""".r //Tweak here to get different youtube quality/streams
+  val downloadLinkRegex = """(?<="url_encoded_fmt_stream_map": ")[\S]*(?=")""".r //Matches Youtube video url list block
   val formatMapRegex = """(?<="fmt_list": ")[\S]*(?=")""".r //Matches the block of urls
   val individualDownloadLinksRegex = """(?<=url=).*?(?=\\u0026)""".r //Matches all the links in different formats
   val invalidChars = """[^\w\.-]""".r //Filename invalid chars
 
-  val preferenceList = List("18","34","5") //Youtube formats that are most preferred in order, h.264 baseline mp4, and then flv for the last two
-  val extensionMap = Map(("18"->"mp4"),("34"->"flv"),("5"->"flv"))
+  val preferenceList = List("18","34","5") //Youtube formats that are most preferred in order, h.264 baseline mp4, and then flv for the last two (modify with extensionMap to prefer other formats)
+  val extensionMap = Map(("18"->"mp4"),("34"->"flv"),("5"->"flv")) //Denotes file extension that should go with each YouTube format
   def download() {
     try {
       val formatLink = http(url("http://www.youtube.com/watch?v=" + id) >- {x =>
