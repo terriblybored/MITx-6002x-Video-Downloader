@@ -77,7 +77,7 @@ class MITx6002x(val email: String, val password: String) {
     </> {x => 
       val weekNames = x.select("div#accordion > h3").map(_.text)
       val rawWeekList = x.select("div#accordion > ul")
-      for ((weekName, weekLinks) <- weekNames.zip(rawWeekList)) yield {
+      for ((weekName, weekLinks) <- weekNames.zip(rawWeekList).par) yield {
         val names = weekLinks.select("li > a > p").not("p[class]").map(_.text)
         
         val linkType = weekLinks.select("li > a > p[class=subtitle]").map(_.text)
