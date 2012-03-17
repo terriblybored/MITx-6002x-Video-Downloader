@@ -72,7 +72,8 @@ class MITx6002x(val email: String, val password: String) {
 
   //get links to video pages
   val streamRegex = """(?<=var.streams=)\{.*?\}""".r
-  val videoNameRegex = """(?<=titles=)\[.*?\]""".r
+  val videoNameRegex = """(?<=titles=)\[.*?\]""".r  //Extracts the video titles array from webpage
+  val courseNumbersRegex = """S([\d]+)V([\d]+)""".r //Extracts course numbering
   val weekList = http(site / "courseware" 
     </> {x => 
       val weekNames = x.select("div#accordion > h3").map(_.text)
@@ -88,8 +89,15 @@ class MITx6002x(val email: String, val password: String) {
           http(site / link >- {videoPage =>
             val streams = streamRegex.findAllIn(videoPage).flatMap(x => JSON.parseFull(x)).map(x=>x.asInstanceOf[Map[String,String]])
             val ids = streams.map(stream => stream("1.0")).toList //Speed is set over here
-            val videoNames = videoNameRegex.findAllIn(videoPage).flatMap(x => JSON.parseFull(x)).next.asInstanceOf[List[String]].filter({x => !"""^S[\d]+V""".r.findFirstIn(x).isEmpty})
-            new LectureSequence(name, videoNames.zip(ids).map({ x => new YoutubeLink(x._2,x._1,http)}))
+            val videoNames = videoNameRegex.findAllIn(videoPage).flatMap(x => JSON.parseFull(x)).next.asInstanceOf[List[String]].filter({x => !"""^S[\d]+V[\d]""".r.findFirstIn(x).isEmpty})  //Grab title names, and filter out those which don't meet SxxVxx
+
+            val videoNamesRenamed = videoNames.map({x => //Normalize numbering
+              val originalNumberingString = courseNumbersRegex.findFirstIn(x).get //Let's hope the string really exists!! Validate first (as done in videoNames)!
+              val courseNumbersRegex(s, v) = originalNumberingString
+              val newNumberingString = "S%02dV%02d".format(s.toInt,v.toInt)
+              x.replaceFirst(originalNumberingString,newNumberingString)})
+
+            new LectureSequence(name, videoNamesRenamed.zip(ids).map({ x => new YoutubeLink(x._2,x._1,http)}))
             })
         }
         new Week(weekName, lectureSeq.toList)
