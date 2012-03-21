@@ -67,7 +67,7 @@ class MITx6002x(val email: String, val password: String) {
         println("Failure to login")
         println("Site returned " + x)
         throw LoginFailure
-      }
+      } 
     })
 
   //get links to video pages
@@ -97,7 +97,9 @@ class MITx6002x(val email: String, val password: String) {
               val newNumberingString = "S%02dV%02d".format(s.toInt,v.toInt)
               x.replaceFirst(originalNumberingString,newNumberingString)})
 
-            new LectureSequence(name, videoNamesRenamed.zip(ids).map({ x => new YoutubeLink(x._2,x._1,http)}))
+            val videoNamesIdUnique = videoNamesRenamed.zip(ids).groupBy(_._1.toString).values.flatMap(nameIdList => if(nameIdList.length>1) nameIdList.zipWithIndex.map({case ((name,id),idx) => (name + " " + idx.toString,id)}) else nameIdList).toList //Handle duplicate video names by appending number
+
+            new LectureSequence(name, videoNamesIdUnique.map({ x => new YoutubeLink(x._2,x._1,http)}))
             })
         }
         new Week(weekName, lectureSeq.toList)
