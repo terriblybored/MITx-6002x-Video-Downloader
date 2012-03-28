@@ -108,35 +108,84 @@ class MITx6002x(val email: String, val password: String) {
     
 }
 
-class YoutubeLink(val id: String, val filename: String, val http: HttpExecutor) {
+class YoutubeLink(val id: String, val videoname: String, val http: HttpExecutor) {
   val downloadLinkRegex = """(?<="url_encoded_fmt_stream_map": ")[\S]*(?=")""".r //Matches Youtube video url list block
   val formatMapRegex = """(?<="fmt_list": ")[\S]*(?=")""".r //Matches the block of urls
   val individualDownloadLinksRegex = """(?<=url=).*?(?=\\u0026)""".r //Matches all the links in different formats
+  val subtitleLinkRegex = """(?<="ttsurl": ")[\S]*(?=")""".r
   val invalidChars = """[^\w\.-]""".r //Filename invalid chars
 
   val preferenceList = List("18","34","5") //Youtube formats that are most preferred in order, h.264 baseline mp4, and then flv for the last two (modify with extensionMap to prefer other formats)
   val extensionMap = Map(("18"->"mp4"),("34"->"flv"),("5"->"flv")) //Denotes file extension that should go with each YouTube format
   def download() {
     try {
-      val formatLink = http(url("http://www.youtube.com/watch?v=" + id) >- {x =>
+        val formatLink = http(url("http://www.youtube.com/watch?v=" + id) >- {x =>
         val formatList = formatMapRegex.findFirstIn(x).get.split(",").map(str => """[\d]+""".r.findFirstIn(str).get)
         val links = individualDownloadLinksRegex.findAllIn(downloadLinkRegex.findFirstIn(x).get).map(_.toString).toList
         val formatLinks = formatList.zip(links)
         val formatValue = preferenceList.filter({x=> formatList.contains(x)}).head
-        
+        val subtitleLink = subtitleLinkRegex.findFirstIn(x)
 
-        formatLinks.filter(_._1 == formatValue).map(x => (x._1, Request.decode_%(x._2).toString)).head
-        }).asInstanceOf[(String,String)]
-      http(url(formatLink._2) >> {input =>
-          val file = new File(invalidChars.replaceAllIn(filename, " ") + "." + extensionMap(formatLink._1))
+        formatLinks.filter(_._1 == formatValue).map(x => (x._1, Request.decode_%(x._2).toString, subtitleLink)).head
+        }).asInstanceOf[(String,String, Option[String])]
+        downloadLink(formatLink._2, videoname + "." + extensionMap(formatLink._1))
+
+        //Tacked on to download subtitles. Please forgive the horror.
+        try {
+          formatLink._3 match {
+            case Some(y) => println(y); new YoutubeSub(Request.decode_%(y.replace("\\u0026","&")).replace("\\","")+"&lang=en", videoname, http)
+            case _ => println("WARNING: FAILED TO PARSE YOUTUBE PAGE OF " + videoname + " FOR SUBTITLES"); throw new Exception
+          }
+        }
+        catch {
+          case _ => println("WARNING: DOWNLOAD OF SUBTITLES FOR " + videoname + " FAILED")
+        }
+    }
+    catch {
+      case _ => println("WARNING: DOWNLOAD OF " + videoname + " FAILED")
+    }
+  }
+  private def downloadLink(uri: String, filename: String) {
+    val filteredFilename = invalidChars.replaceAllIn(filename, " ")
+    http(url(uri) >> {input =>
+          val file = new File(filteredFilename)
           val out = new FileOutputStream(file)
           var buffer = new Array[Byte](512000)
           Iterator.continually(input.read(buffer)).takeWhile(_ != -1).foreach({x => out.write(buffer,0,x)})
           out.close()
       })
-    }
-    catch {
-      case _ => println("WARNING: DOWNLOAD OF " + filename + " FAILED")
-    }
   }
+}
+
+class YoutubeSub(val subLink: String, val videoname: String, val http: HttpExecutor) {
+  val invalidChars = """[^\w\.-]""".r //Filename invalid chars
+  private def timeConvert(time: Float): String = {
+        val hours: Long = (time /3600) toInt
+        val minutes: Long = ((time /60) %60) toInt
+        val seconds: Long = (time %60) toInt
+        val milliseconds: Long = (time %1 *1000) toInt;
+        "%02d:%02d:%02d,%03d".format(hours,minutes,seconds,milliseconds)
+      }
+
+  def subtitles = http(url(subLink) </> {subXML =>
+    {
+      for ((textElement, idx) <- (subXML.select("text")).zipWithIndex) yield {
+        val timeStart = (textElement.attr("start")).toFloat
+        val timeEnd = timeStart + (textElement.attr("dur")).toFloat
+        val words = textElement.text.replace("&#39;","\'")
+        (idx + 1).toString + "\r\n" + "%s --> %s".format(timeConvert(timeStart),timeConvert(timeEnd)) + "\r\n" + words
+      }
+    }.mkString("\r\n\r\n")
+    }).asInstanceOf[String]
+
+
+  def writeSubs() {
+    val filteredFilename = invalidChars.replaceAllIn(videoname, " ")
+    val file = new File(filteredFilename + ".srt")
+    val out = new FileWriter(file)
+    out.write(subtitles)
+    out.close()
+  }
+  println(subLink)
+  writeSubs()
 }
