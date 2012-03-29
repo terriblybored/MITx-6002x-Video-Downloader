@@ -22,8 +22,11 @@ object downloader {
       println("Omit last argument to download all")
       println("e.g. downloader example@example.com password")
       println("Use ? in place of \"Week n\" to get list of downloadable week names")
+      println("Append a -hd to prefer to download 720p h.264 videos (if available)")
       System.exit(-1)
     }
+
+    val downloadHD: Boolean = args.filter(_ == "-hd").length > 0
 
     collection.parallel.ForkJoinTasks.defaultForkJoinPool.setParallelism(30)
     val parsed = new MITx6002x(email, password)
@@ -32,8 +35,8 @@ object downloader {
       parsed.weekList.foreach(x => println(x.name))
     }
     else {
-        val filterFunc = if (args.length == 3) {x: Week => x.name == args(2)} else {x: Week => true}
-      parsed.weekList.filter(filterFunc).par.foreach(week => week.lectureSequence.par.foreach(lecSeq => (lecSeq.lectures.par.foreach(_.download))))
+      val filterFunc = if ((args.length == 3 && !downloadHD) || (args.length == 4 && downloadHD) ) {x: Week => x.name == args(2)} else {x: Week => true} //Provides the default option of downloading everything
+      parsed.weekList.filter(filterFunc).par.foreach(week => week.lectureSequence.par.foreach(lecSeq => (lecSeq.lectures.par.foreach(_.download(downloadHD)))))
     }
   }
   
@@ -115,9 +118,9 @@ class YoutubeLink(val id: String, val videoname: String, val http: HttpExecutor)
   val subtitleLinkRegex = """(?<="ttsurl": ")[\S]*(?=")""".r
   val invalidChars = """[^\w\.-]""".r //Filename invalid chars
 
-  val preferenceList = List("18","34","5") //Youtube formats that are most preferred in order, h.264 baseline mp4, and then flv for the last two (modify with extensionMap to prefer other formats)
-  val extensionMap = Map(("18"->"mp4"),("34"->"flv"),("5"->"flv")) //Denotes file extension that should go with each YouTube format
-  def download() {
+  def download(hd: Boolean = false) {
+    val preferenceList = if (hd) List("22","18","34","5") else List("18","34","5") //Youtube formats that are most preferred in order, h.264 baseline mp4, and then flv for the last two (modify with extensionMap to prefer other formats) HD tacks on a 720p video
+    val extensionMap = Map(("22"->"mp4"),("18"->"mp4"),("34"->"flv"),("5"->"flv")) //Denotes file extension that should go with each YouTube format
     try {
         val formatLink = http(url("http://www.youtube.com/watch?v=" + id) >- {x =>
         val formatList = formatMapRegex.findFirstIn(x).get.split(",").map(str => """[\d]+""".r.findFirstIn(str).get)
@@ -133,7 +136,7 @@ class YoutubeLink(val id: String, val videoname: String, val http: HttpExecutor)
         //Tacked on to download subtitles. Please forgive the horror.
         try {
           formatLink._3 match {
-            case Some(y) => println(y); new YoutubeSub(Request.decode_%(y.replace("\\u0026","&")).replace("\\","")+"&lang=en", videoname, http)
+            case Some(y) => new YoutubeSub(Request.decode_%(y.replace("\\u0026","&")).replace("\\","")+"&lang=en", videoname, http)
             case _ => println("WARNING: FAILED TO PARSE YOUTUBE PAGE OF " + videoname + " FOR SUBTITLES"); throw new Exception
           }
         }
