@@ -60,7 +60,7 @@ Try rerunning the program. It gets a bit fickle as it will fail on any server er
 ###What language is this program written in?
 Scala. I had decided to start programming randomly. This has resulted in horrifically messy code. I hope to learn something out of this.
 
-##Libraries used
+##Libraries used (you should not need to manually download them)
 * [One-](https://github.com/sbt/sbt-onejar)[Jar](http://one-jar.sourceforge.net/)
 * [Dispatch](https://github.com/dispatch/dispatch)
 
