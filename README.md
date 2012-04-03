@@ -15,19 +15,19 @@ Also, most shells allow you to hit the tab key to autocomplete half typed out fi
 
 To use, first type (and autocomplete)
 
-	java -jar default-e89b0802.9.1-0.1-SNAPSHOT-one-jar.jar EMAIL PASSWORD ?
+	java -jar default-e89b08_2.9.1-0.1-SNAPSHOT-one-jar.jar EMAIL PASSWORD ?
 
 to view available weeks, replacing the email and password with your own.
 
 After a while, you should see the program exit. Listed will be the weeks available to download. Let us pick Week 1 to download. Hit the up key to display the last command. Erase the "?" and add the week argument. You should get
 
-	java -jar default-e89b0802.9.1-0.1-SNAPSHOT-one-jar.jar EMAIL PASSWORD "Week 1"
+	java -jar default-e89b08_2.9.1-0.1-SNAPSHOT-one-jar.jar EMAIL PASSWORD "Week 1"
 
 Please remember to retain the quotes around "Week 1", or it will fail. You should replace the week with any week you want (that is listed). All videos in the lecture sequences in that week will be downloaded.
 
 To download HD 720p versions of the lectures, type
 
-	java -jar default-e89b0802.9.1-0.1-SNAPSHOT-one-jar.jar EMAIL PASSWORD "Week 1" -hd
+	java -jar default-e89b08_2.9.1-0.1-SNAPSHOT-one-jar.jar EMAIL PASSWORD "Week 1" -hd
 
 Note that a "-hd" has been tacked on at the end.
 
