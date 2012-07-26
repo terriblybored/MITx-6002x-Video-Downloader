@@ -1,4 +1,5 @@
 #MITx 6002x downloader
+Binaries removed, not maintained
 
 ##Introduction
 Automatically searches for and downloads youtube videos through MITx. Requires java, which you can get from [here](https://www.java.com/en/download/index.jsp)
@@ -64,7 +65,7 @@ Scala. I had decided to start programming randomly. This has resulted in horrifi
 * [One-](https://github.com/sbt/sbt-onejar)[Jar](http://one-jar.sourceforge.net/)
 * [Dispatch](https://github.com/dispatch/dispatch)
 
-[Download Executable](https://github.com/terriblybored/MITx-6002x-Video-Downloader/raw/master/target/scala-2.9.1/default-e89b08_2.9.1-0.1-SNAPSHOT-one-jar.jar)
+Binaries removed, not maintained
 ====================
 
 If you have any further problems, feel free to email me at terriblybored gmail com or post in the issues page.
